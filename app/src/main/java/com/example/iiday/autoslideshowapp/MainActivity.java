@@ -29,6 +29,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     ArrayList<Uri> m_imageUris = new ArrayList<Uri>();
     boolean m_mode;
     int m_index;
+    int m_imageMax;
     Button m_btnPlay;
     Button m_btnPrev;
     Button m_btnFwd;
@@ -41,6 +42,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         m_index = 0;
+        m_imageMax = 0;
         m_mode = true;
         m_btnPrev = (Button)findViewById(R.id.buttonPre);
         m_btnPrev.setOnClickListener(this);
@@ -88,7 +90,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     // 画像URIの取得
     private boolean getContentsInfo(){
-        int i=0;
         m_imageUris.clear();
 
         ContentResolver resolver = getContentResolver();
@@ -96,22 +97,21 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                 null, null, null, null
         );
-        if(!cursor.moveToFirst()){
+        if(cursor.moveToFirst() == false){
             cursor.close();
             return false;
         }
-        for(i=0; i < IMAGE_NUM; i++){
+        do{
             int fieldIndex = cursor.getColumnIndex(MediaStore.Images.Media._ID);
             Long id = cursor.getLong(fieldIndex);
             m_imageUris.add(ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id));
-            if(cursor.moveToNext() == false){
-                break;
-            }
-        }
+        } while (cursor.moveToNext());
         cursor.close();
+        // 画像枚数確認
         if(m_imageUris.size() < IMAGE_NUM){
             return false;
         }
+        m_imageMax = m_imageUris.size();
         return true;
     }
 
@@ -184,10 +184,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private void nextimage(int next){
         m_index = m_index + next;
         if(m_index < 0){
-            m_index = m_index + IMAGE_NUM;
+            m_index = m_index + m_imageMax;
         }
-        else if(m_index >= IMAGE_NUM){
-            m_index = m_index % IMAGE_NUM;
+        else if(m_index >= m_imageMax){
+            m_index = m_index % m_imageMax;
         }
         // 画像表示
         ImageView imageView = (ImageView)findViewById(R.id.imageView);
