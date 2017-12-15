@@ -55,6 +55,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if(Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
             if(getContentsInfo() == false){
                 Toast.makeText(this, "画像が足りません", Toast.LENGTH_LONG).show();
+                return;
             }
             nextimage(0);
             return;
@@ -63,6 +64,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if(checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED){
             if(getContentsInfo() == false) {
                 Toast.makeText(this, "画像が足りません", Toast.LENGTH_LONG).show();
+                return;
             }
             nextimage(0);
             return;
