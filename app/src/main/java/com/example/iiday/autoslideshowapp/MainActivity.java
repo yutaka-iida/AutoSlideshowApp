@@ -8,6 +8,7 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Handler;
 import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -17,16 +18,23 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.Toast;
 
+import java.util.ArrayList;
+import java.util.Timer;
+import java.util.TimerTask;
+
 public class MainActivity extends AppCompatActivity implements View.OnClickListener{
     private static final int IMAGE_NUM = 3;
     private static final int PERMISSIONS_REQUEST_CODE = 100;
 
-    Uri m_imageUris;
+    ArrayList<Uri> m_imageUris = new ArrayList<Uri>();
     boolean m_mode;
     int m_index;
     Button m_btnPlay;
     Button m_btnPrev;
     Button m_btnFwd;
+
+    Timer mTimer;
+    Handler mHandler = new Handler();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,7 +51,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         // パーミッション確認不要
         if(Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-            if(!getContentsInfo()){
+            if(getContentsInfo() == false){
                 Toast.makeText(this, "画像が足りません", Toast.LENGTH_LONG).show();
             }
             nextimage(0);
@@ -51,7 +59,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
         // パーミッション許可されてる場合
         if(checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED){
-            if(!getContentsInfo()) {
+            if(getContentsInfo() == false) {
                 Toast.makeText(this, "画像が足りません", Toast.LENGTH_LONG).show();
             }
             nextimage(0);
@@ -70,7 +78,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             Toast.makeText(this, "権限を設定してください", Toast.LENGTH_LONG).show();
             return;
         }
-        if(!getContentsInfo()){
+        // 権限が付けられたので画像取得
+        if(getContentsInfo() == false){
             Toast.makeText(this, "画像が足りません", Toast.LENGTH_LONG).show();
             return;
         }
@@ -80,6 +89,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     // 画像URIの取得
     private boolean getContentsInfo(){
         int i=0;
+        m_imageUris.clear();
 
         ContentResolver resolver = getContentResolver();
         Cursor cursor = resolver.query(
@@ -93,13 +103,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         for(i=0; i < IMAGE_NUM; i++){
             int fieldIndex = cursor.getColumnIndex(MediaStore.Images.Media._ID);
             Long id = cursor.getLong(fieldIndex);
-            m_imageUris[i] = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id);
-            if(!cursor.moveToNext()){
+            m_imageUris.add(ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id));
+            if(cursor.moveToNext() == false){
                 break;
             }
         }
         cursor.close();
-        if(i != IMAGE_NUM){
+        if(m_imageUris.size() < IMAGE_NUM){
             return false;
         }
         return true;
@@ -109,7 +119,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void onClick(View v){
         // 再生/停止ボタン
         if(v.getId() == R.id.buttonPlay){
-            if(m_mode){
+            if(m_mode == true){
                 saisei();  // 再生
             }
             else{
@@ -131,6 +141,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         m_btnFwd.setEnabled(false);
         m_btnPrev.setEnabled(false);
         m_mode = false;
+        settimer();
     }
     // スライドショー停止処理
     private void teishi(){
@@ -138,8 +149,38 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         m_btnFwd.setEnabled(true);
         m_btnPrev.setEnabled(true);
         m_mode = true;
+        stoptimer();
     }
-    // 画像変更処理
+    // タイマー処理
+    private void settimer(){
+        // 設定済み
+        if(mTimer != null){
+            return;
+        }
+        // タイマー設定
+        mTimer = new Timer();
+        mTimer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                mHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        nextimage(1);
+                    }
+                });
+            }
+        }, 2000, 2000);
+    }
+    // タイマー停止
+    private void stoptimer(){
+        if(mTimer == null){
+            return;
+        }
+        mTimer.cancel();
+        mTimer = null;
+    }
+
+    // 画像表示処理
     private void nextimage(int next){
         m_index = m_index + next;
         if(m_index < 0){
@@ -150,6 +191,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
         // 画像表示
         ImageView imageView = (ImageView)findViewById(R.id.imageView);
-        imageView.setImageURI(m_imageUris[m_index]);
+        imageView.setImageURI(m_imageUris.get(m_index));
     }
 }
